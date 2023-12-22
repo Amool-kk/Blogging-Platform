@@ -15,22 +15,23 @@ const postSchema = new mongoose.Schema({
         required: true
     },
     public: {
-        type: String,
+        type: Boolean,
         default: true
     },
     shareToken: {
         type: String,
-        unique: true
+        unique: true,
+        sparse: true
     }
 });
 
-postSchema.pre('save', (next) => {
-    if (!this.public) {
-        this.shareToken = crypto.randomBytes(20).toString('hex');
+postSchema.pre('save', async function (next) {
+    const post = this;
+    if (!post.public && !post.shareToken) {
+        post.shareToken = crypto.randomBytes(20).toString('hex');
     }
     next();
 });
-
 
 const Post = mongoose.model("Post", postSchema);
 

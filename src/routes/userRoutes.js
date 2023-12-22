@@ -1,59 +1,41 @@
 const express = require("express");
-const router = express.Router();
-const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const Post = require("../models/Post");
+const auth = require("../middleware/authenticate");
 
-router.post("/register", async (req, res) => {
+const router = express.Router();
+
+router.get('/posts', auth, async (req, res) => {
+    const query = req.query;
+    console.log(query)
+    const filter = {
+        author: req.user
+    };
+
+    if (query.public && query.public === 'true') {
+        filter.public = true;
+    } else if(query.public && query.public === 'false') {
+        filter.public = false;
+    }
+
+
     try {
-        const { email, password } = req.body;
-
-        if (!email && !password) {
-            return res.status(400).json({ message: "Both fields are required" });
-        }
-        const existingUser = await User.findOne({ email });
-
-        if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
-        }
-
-        const user = new User({ email, password });
-        await user.save();
-
-        res.status(201).json({ message: "User registered successfully" });
+        const posts = await Post.find(filter);
+        res.status(200).json(posts);
     } catch (error) {
-        res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Error retrieving posts", error });
     }
 });
 
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        if (!email && !password) {
-            return res.status(400).json({ message: "Both fields are required" });
-        }
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "10h" });
-
-        res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === "production" });
-
-        res.status(200).json({ token });
-    } catch (error) {
-        res.status(500).json({ message: "Internal Server Error" });
-    }
+router.get("/profile", auth, async (req, res) => {
+    const user = req.user
+    console.log(user)
+    res.status(200).json({ message: "User is logged in.", user: user })
 });
 
+router.get('/logout', auth, (req, res) => {
+    res.clearCookie('token');
+    res.status(200).json({ message: 'Logout successful' })
+})
 
 module.exports = router;
