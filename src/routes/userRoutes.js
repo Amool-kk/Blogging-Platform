@@ -27,6 +27,21 @@ router.get('/posts', auth, async (req, res) => {
     }
 });
 
+router.get('/:shareToken', async (req, res) => {
+    const shareToken = req.params.shareToken;
+
+    try {
+        const post = await Post.findOne({ shareToken, public: false });
+        if (post) {
+            res.status(200).json(post);
+        } else {
+            res.status(404).json({ message: 'Private post not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving post', error });
+    }
+});
+
 router.get("/profile", auth, async (req, res) => {
     const user = req.user
     console.log(user)

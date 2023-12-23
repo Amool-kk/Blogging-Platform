@@ -14,6 +14,16 @@ router.get('/', async (req, res) => {
     }
 })
 
+router.get('/:postId', async (req, res) => {
+    const postId = req.params.postId;
+    try {
+        const posts = await Post.find({ public: true, _id: postId });
+        res.status(200).json(posts);
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving public posts", error });
+    }
+})
+
 router.post('/', auth, async (req, res) => {
     const { title, content, public } = req.body;
     const post = new Post({ title, content, author: req.user, public });
@@ -26,21 +36,6 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-router.get('/:shareToken', async (req, res) => {
-    const shareToken = req.params.shareToken;
-
-    try {
-        const post = await Post.findOne({ shareToken, public: false });
-        if (post) {
-            res.status(200).json(post);
-        } else {
-            res.status(404).json({ message: 'Private post not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Error retrieving post', error });
-    }
-});
-
 router.put('/:postId', auth, async (req, res) => {
     const postId = req.params.postId;
     const { title, content, public } = req.body;
@@ -48,7 +43,7 @@ router.put('/:postId', auth, async (req, res) => {
     try {
         const post = await Post.findByIdAndUpdate(postId, { title, content, public }, { new: true });
         if (post && post.author === req.user) {
-            res.json(post);
+            res.status(200).json({ message: "Updated", post: post });
         } else {
             res.status(403).json({ message: 'Unauthorized' });
         }
@@ -63,7 +58,7 @@ router.delete("/:postId", auth, async (req, res) => {
     try {
         const post = await Post.findByIdAndDelete(postId);
         if (post && post.author === req.user) {
-            res.status(200).json(post);
+            res.status(200).json({ message: "Deleted", post: post });
         } else {
             res.status(403).json({ message: 'Unauthorized' });
         }
